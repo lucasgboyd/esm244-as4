@@ -1,0 +1,112 @@
+---
+title: "Willamette Falls Time Series (Task 2)"
+author: "Lucas Boyd"
+date: "3/3/2022"
+output: 
+  html_document:
+    theme: lumen
+    code_folding: hide
+---
+
+## Overview {.tabset .tabset-pills}
+
+An engaging image (with caption, incl. photo credit) that is relevant to the dataset
+A brief summary (3 - 4 sentences) of the dataset, and what is included in this report
+A map of the fish ladder location (you can make this in R on your own, or include an existing map appropriately licensed, with attribution)
+A professionally formatted data citation
+
+```{r setup, include=TRUE, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# attach packages
+library(tidyverse)
+library(here)
+library(lubridate)
+library(tsibble)
+library(feasts)
+library(slider)
+library(janitor)
+
+```
+
+**Reading in the data**
+```{r}
+# reading in and preparing the data
+fish <- read_csv(here("data", "willamette_fish_passage.csv")) %>% 
+  clean_names() %>%
+  mutate(date = lubridate::mdy(date)) %>% # turning the date into mdy format with lubridate 
+  as_tsibble(key = NULL, index = date) %>% # changing the format to a tsibble for use in time series
+  select(date, coho, jack_coho, steelhead) # selecting for fish species of interest
+
+# changing all NA values to 0 
+fish[is.na(fish)] <- 0 
+
+# creating a longer df with single observations for each of the fish species of interest
+fish_longer <- fish %>% 
+  pivot_longer(cols = 2:4, names_to = "species", values_to = "count")
+
+
+# changing all NA values to 0 
+fish[is.na(fish)] <- 0 
+```
+
+### Tab 1: Original time series
+
+-  A finalized, static graph of adult passage for coho, jack coho, and steelhead salmon (you decide if these all occupy the same panel, or if they are in separate panels). Add a figure caption. Replace NA values with zero. 
+ -  2 - 3 bullet points summarizing major patterns / notable trends in the salmon passage time series data
+ 
+```{r}
+ggplot(data = fish) +
+  geom_line(aes(x = date, y = coho))
+
+ggplot(data = fish) +
+  geom_line(aes(x = date, y = jack_coho))
+
+ggplot(data = fish) +
+  geom_line(aes(x = date, y = steelhead))
+
+
+ggplot(data = fish_longer, aes(x = date, y = count, color = species)) +
+  geom_line ()
+
+```
+ We need to ask some big picture questions at this point, like: 
+
+- Does there appear to be an overall trend? No.
+- Does there appear to be seasonality? Yes.
+- Does there appear to be cyclicality? Unsure.
+- Any notable outliers or additional patterns? No noted.
+
+### Tab 2: Seasonplots
+-  A finalized seasonplot for each species (coho, jack coho, steelhead) in its own panel. You can either facet_wrap/facet_grid, or use patchwork or cowplot, to make the figure. Add a caption.
+
+```{r}
+# season plot for each fish species
+fish_longer %>% 
+  gg_season(y = count) +
+  facet_wrap( ~ species)
+```
+
+Add 2 - 3 bullet points summarizing the major trends you see in the seasonplots.
+
+### Tab 3: Annual counts by species
+
+```{r}
+fish_annual <- fish_longer %>% 
+  index_by(year = ~year(.)) %>% 
+  group_by(species) %>% 
+  summarize(yearly_counts = sum(count))
+
+ggplot(data = fish_annual, aes(x = year, y = yearly_counts, color = species)) +
+         geom_line()
+```
+
+-  A finalized figure of annual totals for fish passage, for each of the 3 species (coho, jack coho, steelhead). You decide if this is in a single panel, or multiple panels. Add a figure caption. 
+-  Add 2 - 3 bullet points summarizing major trends you see in the annual totals by species from 2000 - 2010.
+
+
+
+
+
+
+
+
