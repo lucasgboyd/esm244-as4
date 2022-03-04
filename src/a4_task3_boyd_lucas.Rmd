@@ -1,12 +1,19 @@
 ---
-title: "Text (Task 3)"
+title: "State of the Union Adresses: Text and Sentiment Analysis"
 author: "Lucas Boyd"
 date: "3/3/2022"
-output: html_document
+output: 
+  html_document:
+    theme: lumen
+    code_folding: hide
+  
 ---
+## Overview
+The following report analyzes the transcripts of two State of the Union adresses: Biden's 2022 speech and Trump's 2020 speech. First, data is wrangled to display the most frequently mentioned words by each president. Then, sentiment analysis is performed to compare the text of the two speeches. 
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+### Setup
+```{r setup, include= TRUE, warning = FALSE, message = FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE )
 # attach packages
 library(tidyverse)
 library(tidytext)
@@ -14,92 +21,202 @@ library(textdata)
 library(pdftools)
 library(ggwordcloud)
 library(here)
+library(patchwork)
 ```
+**Data Citations:** 
+“Full Transcript: Trump’s 2020 State of the Union Address,” February 5, 2020, sec. U.S. https://www.nytimes.com/2020/02/05/us/politics/state-of-union-transcript.html.
 
-## Read in 
-
+“Full Text: Biden State of the Union 2022 Transcript.” POLITICO. Accessed March 3, 2022. https://www.politico.com/news/2022/03/01/biden-state-of-the-union-2022-transcript-full-text-00013009.
 ```{r, cache = TRUE}
-biden <- pdf_text(here("data", "biden.pdf"))
+# reading in the data
+biden <- pdf_text(here("data", "biden.pdf")) # Biden State of the Union 2022
+
+trump <- pdf_text(here("data", "trump.pdf")) # Trump State of of the Union 2020
 ```
 
-# putting it into a dataframe
+![Biden and Trump giving their annual State of the Union adress in 2022 and 2020, respectively. Credit: *Politico*](biden_trump.jpg)
 
+## Text analysis
 ```{r}
+### DATA WRANGLING
+
+# storing data frames of text for each speech transcript
 biden_lines <- data.frame(biden) %>% 
+  mutate(page = 1:n()) %>% # adding a column with page numbers 
+  mutate(text_full = str_split(biden, pattern = '\\n')) %>% # splitting the text by line breaks
+  unnest(text_full) %>% # unnesting the text column
+  mutate(text_full = str_trim(text_full)) # trimming the whitespace
+
+trump_lines <- data.frame(trump) %>% 
   mutate(page = 1:n()) %>% # adding a column with page numbers
-  mutate(text_full = str_split(biden, pattern = '\\n')) %>% # 
-  unnest(text_full) %>% 
-  mutate(text_full = str_trim(text_full)) 
-```
+  mutate(text_full = str_split(trump, pattern = '\\n')) %>% # splitting the text by line breaks
+  unnest(text_full) %>% # unnesting the text column
+  mutate(text_full = str_trim(text_full)) # trimming the whitespace
 
-## Get some word counts!
-
-```{r}
+# creating dataframes with a column where each word is a single observation
 biden_words <- biden_lines %>% # dataframe with a whole bunch of words as single observations
-  unnest_tokens(word, text_full) %>% 
-  select(-biden)
-```
+  unnest_tokens(word, text_full) %>% # tokenizing by word
+  select(-biden) 
 
-## Remove stop words
-```{r}
+trump_words <- trump_lines %>% # dataframe with a whole bunch of words as single observations
+  unnest_tokens(word, text_full) %>% # tokenizing by word
+  select(-trump)
+
+# removing stop words
+
+# storing a vector of custom stop words to remove from the text
+stop_custom_vector <- c("applause", "american", "americans", "america", "america's", "american's", "i've", "i'm", "haven't", "don't", "can't", "won't", "let's", "it's", "people", "tonight", "percent", "u.s", "ago", "nation", "nation's", 1:100)
+
+# turning the vector into a dataframe
+stop_custom <- data.frame(stop_custom_vector, "word")
+
+stop_custom_clean <- stop_custom %>% 
+  rename("word" = stop_custom_vector)
+
+# removing stop words from both text dataframes
 biden_words_clean <- biden_words %>% 
-  anti_join(stop_words, by = 'word')
-# make a vector of my own stop words to add here
-```
+  anti_join(stop_words, by = "word") %>% 
+  anti_join(stop_custom_clean, by = "word")
 
-```{r}
-nonstop_counts <- biden_words_clean %>% # getting the counts of each word
+trump_words_clean <- trump_words %>% 
+  anti_join(stop_words, by = "word") %>% 
+  anti_join(stop_custom_clean, by = "word")
+
+# getting counts of the instances of each word from each speech text
+
+nonstop_counts_biden <- biden_words_clean %>% # getting the counts of each word
   count(word)
 
-```
+nonstop_counts_trump <- trump_words_clean %>% # getting the counts of each word
+  count(word)
 
+# storing dataframes of the top 50 most counted words for each speech
 
-```{r}
-top_100_words <- nonstop_counts %>% 
-  arrange(-n) %>% 
-  slice(1:100) %>% 
-  ungroup()
+top_50_words_biden <- nonstop_counts_biden %>% 
+  arrange(-n) %>% # descending order
+  slice(1:50) %>% # top 100
+  ungroup() # removing stored groupings
 
-```
+top_50_words_trump <- nonstop_counts_trump %>% 
+  arrange(-n) %>% # descending order
+  slice(1:50) %>% # top 100
+  ungroup() # removing stored groupings
 
-```{r}
-speech_cloud <- ggplot(data = top_100_words, aes(label = word)) +
-  geom_text_wordcloud(aes(color = n, size = n), shape = "diamond") +
+### VISUALIZATION 
+
+# generating word clouds for each speech based on most frequent words 
+
+speech_cloud_biden <- ggplot(data = top_50_words_biden, aes(label = word)) + # labeling the words with their values
+  geom_text_wordcloud(aes(color = n, size = n), shape = "square") + # mapping aesthetics by number of counts
+  scale_size_area(max_size = 6) + # limiting the size of the biggest words
+  scale_color_gradientn(colors = c("royalblue1", "dodgerblue4")) + # custom colors
+  theme_minimal() # theme
+
+speech_cloud_trump <- ggplot(data = top_50_words_trump, aes(label = word)) +
+  geom_text_wordcloud(aes(color = n, size = n), shape = "square") +
   scale_size_area(max_size = 6) +
-  scale_color_gradientn(colors = c("darkgreen","blue","purple")) +
+  scale_color_gradientn(colors = c("red4","red")) +
   theme_minimal()
 
-speech_cloud
+speech_cloud_biden | speech_cloud_trump
+
 ```
 
-# Sentiment analysis
-
 ```{r}
-get_sentiments(lexicon = "afinn")
+climate_biden <- nonstop_counts_biden %>% 
+  filter(word == "climate")
+
+climate_trump_df <- data.frame("climate", "0")
+
+climate_trump <- climate_trump_df %>% 
+  rename(word = X.climate.,
+         n = X.0.)
+
+top_20_words_biden <- nonstop_counts_biden %>% 
+  arrange(-n) %>% # descending order
+  slice(1:20) %>% # top 20
+  ungroup() 
+
+top_20_climate_biden <- rbind(top_20_words_biden, climate_biden) 
+
+top_20_words_trump <- nonstop_counts_trump %>% 
+  arrange(-n) %>% # descending order
+  slice(1:20) %>% # top 20
+  ungroup() 
+
+top_20_climate_trump <- rbind(top_20_words_trump, climate_trump)
+
+ggplot(data = top_20_climate_biden, aes(x = reorder(word, n), y = n)) +
+  geom_col() +
+  coord_flip()
+  
+  
+
 ```
 
-### Sentiment analysis with afinn: 
 
-First, bind words in `hobbit_nonstop_words` to `afinn` lexicon:
+
+
+## Sentiment analysis
 ```{r}
+### DATA WRANGLING
+
+# adding a column with afinn sentiment analysis to each data frame
 biden_afinn <- biden_words_clean %>% 
-  inner_join(get_sentiments("afinn"), by = 'word')
-```
+  inner_join(get_sentiments("afinn"), by = 'word') # this will remove any words that don't have sentiment values
 
-```{r}
-afinn_counts <- biden_afinn %>% 
+trump_afinn <- trump_words_clean %>% 
+  inner_join(get_sentiments("afinn"), by = 'word')
+# values are sorted from -5 to 5
+
+# Find the mean afinn score of each speech
+
+# Biden
+afinn_counts_biden <- biden_afinn %>% 
   count(value)
 
-# Plot them: 
-ggplot(data = afinn_counts, aes(x = value, y = n)) +
-  geom_col()
+afinn_mean_biden <- round(mean(biden_afinn$value), 2)
 
-# Find the mean afinn score:
-afinn_means <- biden_afinn %>%
-  summarize(mean_afinn = mean(value))
+# Trump
+afinn_counts_trump <- trump_afinn %>% 
+  count(value)
+
+afinn_mean_trump <- round(mean(trump_afinn$value), 2)
+
+# making a mini dataframe with the means for each speech
+trump_biden_afinn <- data.frame(afinn_mean_trump, afinn_mean_biden) %>% 
+  pivot_longer(cols = 1:2, values_to = "afinn", names_to = "pres") %>% 
+  mutate(pres = case_when(
+    pres == "afinn_mean_biden" ~ "Biden 2022",
+    pres == "afinn_mean_trump" ~ "Trump 2020"
+  ))
   
-```
+### VISUALIZATION
 
+ggplot(data = trump_biden_afinn, aes(x = pres, y = afinn, fill = pres)) +
+  geom_col(width = 0.5) +
+  geom_text(aes(label = afinn), # adding text labels to columns
+            size = 20,
+            vjust = -.1) +
+scale_fill_manual(values = c("blue", "red")) + # custom colors
+  scale_y_continuous(limits = c(-5,5)) + # changing y axis to reflect
+  theme_minimal(12) +
+  theme(axis.text.x = element_text( # customizing text
+    size = 16,
+    vjust = 47),
+    legend.position = "none") + # removing legend
+  labs(x = element_blank(), y = "Average Afinn sentiment value ") + # labeling axes
+  geom_text(aes(x = 1.5, y =5), # adding text 
+            label = "Positive sentiment",
+            size = 7) +
+  geom_text(aes(x = 1.5, y =-5), 
+            label = "Negative sentiment",
+            size = 7)+
+  geom_text(aes(x = 1.5, y =-.3), 
+            label = "Neutral",
+            size = 4) +
+  geom_hline(yintercept = 0) # adding horizontal line to mark neutral sentiment
+```
 
 
 
