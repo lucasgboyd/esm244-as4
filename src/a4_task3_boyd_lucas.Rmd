@@ -1,17 +1,18 @@
 ---
-title: "State of the Union Adresses: Text and Sentiment Analysis"
+title: "State of the Union: Text & Sentiment Analysis"
 author: "Lucas Boyd"
 date: "3/3/2022"
 output: 
   html_document:
-    theme: lumen
+    theme: journal
     code_folding: hide
   
 ---
-## Overview
-The following report analyzes the transcripts of two State of the Union adresses: Biden's 2022 speech and Trump's 2020 speech. First, data is wrangled to display the most frequently mentioned words by each president. Then, sentiment analysis is performed to compare the text of the two speeches. 
+## Overview {.tabset .tabset-pills}
+The following report analyzes the transcripts of two State of the Union Addresses: Biden's 2022 address and Trump's 2020 address. First, data is wrangled to display the most frequently mentioned words by each president. Then, Afinn analysis is performed to compare the sentiment of the two speeches. 
 
-### Setup
+**Setup:**
+Attaching required packages and reading in text data. 
 ```{r setup, include= TRUE, warning = FALSE, message = FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE )
 # attach packages
@@ -22,21 +23,16 @@ library(pdftools)
 library(ggwordcloud)
 library(here)
 library(patchwork)
-```
-**Data Citations:** 
-“Full Transcript: Trump’s 2020 State of the Union Address,” February 5, 2020, sec. U.S. https://www.nytimes.com/2020/02/05/us/politics/state-of-union-transcript.html.
 
-“Full Text: Biden State of the Union 2022 Transcript.” POLITICO. Accessed March 3, 2022. https://www.politico.com/news/2022/03/01/biden-state-of-the-union-2022-transcript-full-text-00013009.
-```{r, cache = TRUE}
 # reading in the data
 biden <- pdf_text(here("data", "biden.pdf")) # Biden State of the Union 2022
 
 trump <- pdf_text(here("data", "trump.pdf")) # Trump State of of the Union 2020
 ```
+### Text Analysis
 
-![Biden and Trump giving their annual State of the Union adress in 2022 and 2020, respectively. Credit: *Politico*](biden_trump.jpg)
+![Joe Biden and Donald Trump giving State of the Union Adresses in 2022 and 2020. Credit: *Politico*](biden_trump.jpg){width=75%}
 
-## Text analysis
 ```{r}
 ### DATA WRANGLING
 
@@ -108,29 +104,40 @@ top_50_words_trump <- nonstop_counts_trump %>%
 
 speech_cloud_biden <- ggplot(data = top_50_words_biden, aes(label = word)) + # labeling the words with their values
   geom_text_wordcloud(aes(color = n, size = n), shape = "square") + # mapping aesthetics by number of counts
-  scale_size_area(max_size = 6) + # limiting the size of the biggest words
+  scale_size_area(max_size = 6.5) + # limiting the size of the biggest words
   scale_color_gradientn(colors = c("royalblue1", "dodgerblue4")) + # custom colors
-  theme_minimal() # theme
+  theme_minimal() +
+  labs(title = "Biden 2022") +
+  theme(plot.title = element_text(hjust = 0.5,
+                                  size = 26))
 
 speech_cloud_trump <- ggplot(data = top_50_words_trump, aes(label = word)) +
   geom_text_wordcloud(aes(color = n, size = n), shape = "square") +
   scale_size_area(max_size = 6) +
   scale_color_gradientn(colors = c("red4","red")) +
-  theme_minimal()
+  theme_minimal() +
+  labs(title = "Trump 2020",
+       size = 12) +
+  theme(plot.title = element_text(hjust = 0.5,
+                                  size = 26))
 
 speech_cloud_biden | speech_cloud_trump
 
 ```
 
 ```{r}
+### DATA WRANGLING
 climate_biden <- nonstop_counts_biden %>% 
-  filter(word == "climate")
+  filter(word == "climate") %>% 
+  mutate(word = case_when(
+    word == "climate" ~ "climate*"
+  ))
 
-climate_trump_df <- data.frame("climate", "0")
+climate_trump_df <- data.frame("climate*", 0)
 
 climate_trump <- climate_trump_df %>% 
-  rename(word = X.climate.,
-         n = X.0.)
+  rename(word = X.climate..,
+         n = X0)
 
 top_20_words_biden <- nonstop_counts_biden %>% 
   arrange(-n) %>% # descending order
@@ -146,18 +153,59 @@ top_20_words_trump <- nonstop_counts_trump %>%
 
 top_20_climate_trump <- rbind(top_20_words_trump, climate_trump)
 
-ggplot(data = top_20_climate_biden, aes(x = reorder(word, n), y = n)) +
-  geom_col() +
-  coord_flip()
-  
-  
+### VISUALIZATION
 
+# bar plots of 20 most frequently used words by speach
+
+biden_bar <- ggplot(data = top_20_climate_biden, aes(x = reorder(word, n), y = n, fill = n)) + # make the plot in descending order
+  geom_col() +
+  coord_flip() + # flipping axes
+  scale_fill_gradientn(colors = c("royalblue1", "dodgerblue4")) + # manual colors
+  theme_minimal() +
+  theme(legend.position = "none", # adjusting text and legends
+        axis.text.x = element_blank(),
+        axis.text.y = element_text(
+          margin = margin(t = 0, r = -70, b = 0, l = 0),
+          size = 10,
+          color = "white"),
+          panel.grid = element_blank(), # removing gridlines
+        ) +
+  geom_text(aes(label = n), hjust = 1.2, color = "white") + # adding number labels
+  labs(y = element_blank(),
+       x = element_blank()) +
+  geom_rect(ymin = 2.1, ymax = 6.3, xmin = 0, xmax = 1.4, fill = "darkgreen") # allowing "climate" to be seen
+
+trump_bar <- ggplot(data = top_20_climate_trump, aes(x = reorder(word, n), y = n, fill = n)) +
+  geom_col() +
+  coord_flip() +
+  scale_fill_gradientn(colors = c("red","red4")) +
+  theme_minimal() +
+  theme(legend.position = "none",
+        axis.text.x = element_blank(),
+        axis.text.y = element_text(
+          margin = margin(t = 0, r = -80, b = 0, l = 0),
+          size = 10,
+          color = "white"),
+          panel.grid = element_blank()
+        ) +
+  geom_text(aes(label = n), hjust = 1.2, color = "white") +
+  labs(y = element_blank(),
+       x = element_blank()) +
+  geom_text(label = "0", x = 1, y = 0.3) +
+  geom_rect(ymin = 2.7, ymax = 6.8, xmin = 0, xmax = 1.4, fill = "darkgreen")
+  
+  biden_bar | trump_bar # placing plots next to eachother in outout html
 ```
 
+**Fig. 1** displays the results of text analysis from the 2022 and 2020 State of the Union address transcripts. Biden's 2022 adress is on the left side of the panel while Trump's 2020 adress is on the right. The top panel visualizes the top 50 most used words in each speech with the size of word corresponding to frequency. The bottom panel examines counts of the top 20 most frequently used words in each address. Words that were determined to be of no interest to the comparison (stop words) were excluded from the analysis and visualization. 
 
+*Note: "climate" was not one of the top 20 most frequently used words in either speech, but is included here for comparison. 
+$$\\[.5in]$$
 
+### Sentiment Analysis
 
-## Sentiment analysis
+![Credit: *CNN*](tb2.jpg){width=75%}
+
 ```{r}
 ### DATA WRANGLING
 
@@ -205,20 +253,25 @@ scale_fill_manual(values = c("blue", "red")) + # custom colors
     size = 16,
     vjust = 47),
     legend.position = "none") + # removing legend
-  labs(x = element_blank(), y = "Average Afinn sentiment value ") + # labeling axes
+  labs(x = element_blank(), y = "Average Afinn sentiment value") + # labeling axes
   geom_text(aes(x = 1.5, y =5), # adding text 
             label = "Positive sentiment",
-            size = 7) +
+            size = 5) +
   geom_text(aes(x = 1.5, y =-5), 
             label = "Negative sentiment",
-            size = 7)+
+            size = 5)+
   geom_text(aes(x = 1.5, y =-.3), 
             label = "Neutral",
             size = 4) +
-  geom_hline(yintercept = 0) # adding horizontal line to mark neutral sentiment
+  geom_hline(yintercept = 0)  # adding horizontal line to mark neutral sentiment
+
 ```
 
+**Fig. 2** shows the results of Afinn text sentiment analysis performed on the transcripts of the two State of the Union Addresses. Qualifying words are given a score from -5 (very negative) to 5 (very positive). The figure displays the average Afinn score of all qualifying words in each transcript. While the results showed similar sentiment overall, Trump's 2020 address rated as slightly more positive than Biden's 2022 address. 
+$$\\[.5in]$$
 
+#### Citations
 
+“Full Transcript: Trump’s 2020 State of the Union Address,” February 5, 2020, sec. U.S. https://www.nytimes.com/2020/02/05/us/politics/state-of-union-transcript.html.
 
-
+“Full Text: Biden State of the Union 2022 Transcript.” POLITICO. Accessed March 3, 2022. https://www.politico.com/news/2022/03/01/biden-state-of-the-union-2022-transcript-full-text-00013009.
