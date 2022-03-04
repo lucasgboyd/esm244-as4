@@ -1,0 +1,107 @@
+---
+title: "Text (Task 3)"
+author: "Lucas Boyd"
+date: "3/3/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# attach packages
+library(tidyverse)
+library(tidytext)
+library(textdata)
+library(pdftools)
+library(ggwordcloud)
+library(here)
+```
+
+## Read in 
+
+```{r, cache = TRUE}
+biden <- pdf_text(here("data", "biden.pdf"))
+```
+
+# putting it into a dataframe
+
+```{r}
+biden_lines <- data.frame(biden) %>% 
+  mutate(page = 1:n()) %>% # adding a column with page numbers
+  mutate(text_full = str_split(biden, pattern = '\\n')) %>% # 
+  unnest(text_full) %>% 
+  mutate(text_full = str_trim(text_full)) 
+```
+
+## Get some word counts!
+
+```{r}
+biden_words <- biden_lines %>% # dataframe with a whole bunch of words as single observations
+  unnest_tokens(word, text_full) %>% 
+  select(-biden)
+```
+
+## Remove stop words
+```{r}
+biden_words_clean <- biden_words %>% 
+  anti_join(stop_words, by = 'word')
+# make a vector of my own stop words to add here
+```
+
+```{r}
+nonstop_counts <- biden_words_clean %>% # getting the counts of each word
+  count(word)
+
+```
+
+
+```{r}
+top_100_words <- nonstop_counts %>% 
+  arrange(-n) %>% 
+  slice(1:100) %>% 
+  ungroup()
+
+```
+
+```{r}
+speech_cloud <- ggplot(data = top_100_words, aes(label = word)) +
+  geom_text_wordcloud(aes(color = n, size = n), shape = "diamond") +
+  scale_size_area(max_size = 6) +
+  scale_color_gradientn(colors = c("darkgreen","blue","purple")) +
+  theme_minimal()
+
+speech_cloud
+```
+
+# Sentiment analysis
+
+```{r}
+get_sentiments(lexicon = "afinn")
+```
+
+### Sentiment analysis with afinn: 
+
+First, bind words in `hobbit_nonstop_words` to `afinn` lexicon:
+```{r}
+biden_afinn <- biden_words_clean %>% 
+  inner_join(get_sentiments("afinn"), by = 'word')
+```
+
+```{r}
+afinn_counts <- biden_afinn %>% 
+  count(value)
+
+# Plot them: 
+ggplot(data = afinn_counts, aes(x = value, y = n)) +
+  geom_col()
+
+# Find the mean afinn score:
+afinn_means <- biden_afinn %>%
+  summarize(mean_afinn = mean(value))
+  
+```
+
+
+
+
+
+
