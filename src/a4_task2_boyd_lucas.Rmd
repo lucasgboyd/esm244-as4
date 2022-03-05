@@ -1,27 +1,23 @@
 ---
-title: "Willamette Falls Time Series (Task 2)"
+title: "Willamette Falls: Fish Passage Analysis"
 author: "Lucas Boyd"
 date: "3/3/2022"
 output: 
-  html_document:
-    theme: lumen
+  html_document: 
     code_folding: hide
+    theme: spacelab
 ---
 
-![Willamette Falls, 2018. Credit: *Oregon Metro Council*](falls.jpeg)
+![Willamette Falls, 2018. Credit: Oregon Metro Council](falls.jpeg){width="100%"}
+
 ## Overview {.tabset .tabset-pills}
 
-The following report examines....A brief summary (3 - 4 sentences) of the dataset, and what is included in this report
+The following report examines Data Access in Real Time (DART) fish passage data observed at Willamette Falls. From 2001-2010, counts of several fish species were recorded moving through the fish ladder. The following code wrangles and visualizes this time-series data to reveal trends in the runs of three salmon species: coho, jack coho, and steelhead.
 
-
-A map of the fish ladder location (you can make this in R on your own, or include an existing map appropriately licensed, with attribution)
-![](falls_map.png)
-
-
-A professionally formatted data citation
+**Data:** Columbia Basin Research, University of Washington. 2010. DART Adult Passage Graphics & Text. [<http://www.cbr.washington.edu/dart/query/adult_graph_text.>](http://www.cbr.washington.edu/dart/query/adult_graph_text.*)
 
 ```{r setup, include=TRUE, message = FALSE, warning = FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 # attach packages
 library(tidyverse)
 library(here)
@@ -30,15 +26,8 @@ library(tsibble)
 library(feasts)
 library(slider)
 library(janitor)
-library(patchwork)
-library(gghighlight)
-library(plotly)
-library(paletteer)
-library(RColorBrewer)
-
 ```
 
-**Reading in the data**
 ```{r}
 # reading in and preparing the data
 fish <- read_csv(here("data", "willamette_fish_passage.csv")) %>% 
@@ -58,23 +47,25 @@ fish_longer <- fish %>%
     species == "jack_coho" ~ "Jack Coho", 
     species == "steelhead" ~ "Steelhead"))
 
+# creating a dataframe by month for use in visualizing
 fish_month <- fish_longer %>% 
-  index_by(month = ~yearmonth(.)) %>% 
-  group_by(species) %>% 
-  summarize(monthly_total = sum(count)) %>% 
-  mutate(year = year(month))
+  index_by(month = ~yearmonth(.)) %>% # index by month
+  group_by(species) %>% # species groups
+  summarize(monthly_total = sum(count)) %>% # total counts by month
+  mutate(year = year(month)) # adding a year column
 ```
 
-### Tab 1: Original time series
+### **Map**
 
--  A finalized, static graph of adult passage for coho, jack coho, and steelhead salmon (you decide if these all occupy the same panel, or if they are in separate panels). Add a figure caption. Replace NA values with zero. 
- -  2 - 3 bullet points summarizing major patterns / notable trends in the salmon passage time series data
- 
+![Source: *US Army Corps of Engineers, [Integrated Environmental Assessment 2016](https://media.defense.gov/2017/May/23/2001751687/-1/-1/1/DRAFT%20WFL%20INTEGRATED%20DISPOSITION%20STUDY%20AND%20EA.PDF).*](falls_map.png){width="75%"}
+
+### Original time series
+
 ```{r}
-ggplot(data = fish_month, aes(x = month, 
-                               y = monthly_total,
+ggplot(data = fish_longer, aes(x = date, 
+                               y = count,
                                color = species)) +
-  geom_line(size = 0.7) +
+  geom_line(size = 0.5, alpha = 0.9) +
   theme_minimal(12) +
   theme(legend.position = c(.6, .75),
         legend.title = element_blank(),
@@ -83,45 +74,58 @@ ggplot(data = fish_month, aes(x = month,
         axis.text.x = element_text(
           vjust = 8)
         ) +
-  scale_color_manual(values = c("firebrick3", "goldenrod3", "darkgreen")) +
-  labs(x = element_blank(), y = "Total fish count per month") 
+  scale_color_manual(values = c("dodgerblue3", "goldenrod3", "darkgreen")) +
+  labs(x = element_blank(), y = "Total fish count per month")
 
 
 ```
- 
- 
- We need to ask some big picture questions at this point, like: 
 
-- Does there appear to be an overall trend? No.
-- Does there appear to be seasonality? Yes.
-- Does there appear to be cyclicality? Unsure.
-- Any notable outliers or additional patterns? No noted.
+**Fig. 1:** Time series plot of Coho, Jack Coho, and Steelhead counts by month between 2001 and 2010 at the Willamette Falls fish ladder.
 
-### Tab 2: Seasonplots
--  A finalized seasonplot for each species (coho, jack coho, steelhead) in its own panel. You can either facet_wrap/facet_grid, or use patchwork or cowplot, to make the figure. Add a caption.
+#### Takeaways
+
+-   Steelhead have historically been the most consistent and abundant species throughout the first several years of observation.
+-   Coho surged in 2009 and 2010, and they were most counted fish species the last two years of observations.
+-   There is significant seasonality in the fish passage data for all three species. Jack coho and coho tend to pass through the fish ladder at the same time of year while steelhead move through a different time.
+
+$$\\[.5in]$$
+
+### Seasonplots
 
 ```{r}
 # season plot for each fish species
 fish_longer %>% 
-  gg_season(y = count, pal = c("darkgreen", "goldenrod3", "firebrick3")) +
+  gg_season(y = count, 
+            pal = c("dodgerblue3", "goldenrod3", "darkgreen"),
+            season.labels = 1:12) +
   theme_minimal(12) +
   labs(x = element_blank(), y = "Daily Count") +
   theme(axis.text.x = element_text(
     size = 12))
 ```
 
-Add 2 - 3 bullet points summarizing the major trends you see in the seasonplots.
+**Fig. 2:** Seasonplot showing how the salmon runs vary for the three species over the course of a year from 2001-2010 at the Wilamette Falls fish ladder.
 
-### Tab 3: Annual counts by species
+#### Takeaways
+
+-   Jack coho and coho tend to pass through the fish ladder at the same time of year while steelhead move through a different time.
+
+-   Jack coho and coho runs are shorter in duration, only lasting a couple of months and peaking in October. Outside of the typical run season, these species are very rarely observed.
+
+-   Steelhead runs are typically around 6 months and occur in the first half of the year. Additionally, steelhead are often observed outside of their typical run season.
+
+$$\\[.5in]$$
+
+### Annual counts by species
 
 ```{r}
 fish_annual <- fish_longer %>% 
   index_by(year = ~year(.)) %>% 
   group_by(species) %>% 
-  summarize(yearly_counts = sum(count)) 
+  summarize(yearly_counts = sum(count))
 
 ggplot(data = fish_annual, aes(x = year, y = yearly_counts, color = species)) +
-          geom_line(size = 1) +
+          geom_line(size = 1, alpha = 0.9) +
   theme_minimal(12) +
   theme(legend.position = c(.6, .75),
         legend.title = element_blank(),
@@ -130,20 +134,20 @@ ggplot(data = fish_annual, aes(x = year, y = yearly_counts, color = species)) +
         axis.text.x = element_text(
           vjust = 8)
         ) +
-  scale_color_manual(values = c("firebrick3", "goldenrod3", "darkgreen")) +
+  scale_color_manual(values = c("dodgerblue3", "goldenrod3", "darkgreen")) +
   labs(x = element_blank(), y = "Total fish count per month") +
-  scale_x_continuous(minor_breaks = seq(0,10,1))
-  
+  scale_x_continuous(n.breaks = 10)
   
 ```
 
--  A finalized figure of annual totals for fish passage, for each of the 3 species (coho, jack coho, steelhead). You decide if this is in a single panel, or multiple panels. Add a figure caption. 
--  Add 2 - 3 bullet points summarizing major trends you see in the annual totals by species from 2000 - 2010.
+**Fig. 3**: Annual counts of each of the three species observed at the Willamette Falls fish ladder 2001-2010.
 
+#### Takeaways
 
+-   Steelhead abundance has fluctuated significantly year to year across the 10 years of observation.
 
+-   After being very consistent from 2001-2008, Coho runs increased dramatically in 2009.
 
+-   Of the three in this analysis, Jack coho are the least observed species at the Wilamette Fish ladder. This stayed relatively consistent over the course of observations.
 
-
-
-
+$$\\[.5in]$$Columbia Basin Research, University of Washington. 2010. DART Adult Passage Graphics & Text. [\<http://www.cbr.washington.edu/dart/query/adult_graph_text.>](http://www.cbr.washington.edu/dart/query/adult_graph_text.*)
