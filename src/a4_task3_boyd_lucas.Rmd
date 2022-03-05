@@ -6,13 +6,12 @@ output:
   html_document:
     theme: journal
     code_folding: hide
-  
 ---
-## Overview {.tabset .tabset-pills}
-The following report analyzes the transcripts of two State of the Union Addresses: Biden's 2022 address and Trump's 2020 address. First, data is wrangled to display the most frequently mentioned words by each president. Then, Afinn analysis is performed to compare the sentiment of the two speeches. 
 
-**Setup:**
-Attaching required packages and reading in text data. 
+# Overview {.tabset .tabset-pills}
+
+The following report analyzes the transcripts of two State of the Union Addresses: Biden's 2022 address and Trump's 2020 address. First, data is wrangled to display the most frequently mentioned words by each president. Then, Afinn analysis is performed to compare the sentiment of the two speeches.
+
 ```{r setup, include= TRUE, warning = FALSE, message = FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE )
 # attach packages
@@ -24,15 +23,17 @@ library(ggwordcloud)
 library(here)
 library(patchwork)
 library(DT)
+library(strip)
 
 # reading in the data
-biden <- pdf_text(here("data", "biden.pdf")) # Biden State of the Union 2022
+biden <- pdf_text(here("data", "biden.pdf"))  # Biden State of the Union 2022
 
 trump <- pdf_text(here("data", "trump.pdf")) # Trump State of of the Union 2020
 ```
-### Text Analysis
 
-![Joe Biden and Donald Trump giving State of the Union Adresses in 2022 and 2020. Credit: *Politico*](biden_trump.jpg){width=75%}
+## Text Analysis
+
+![Joe Biden and Donald Trump giving State of the Union Adresses in 2022 and 2020. Credit: *Politico*](biden_trump.jpg){width="75%"}
 
 ```{r}
 ### DATA WRANGLING
@@ -40,6 +41,7 @@ trump <- pdf_text(here("data", "trump.pdf")) # Trump State of of the Union 2020
 # storing data frames of text for each speech transcript
 biden_lines <- data.frame(biden) %>% 
   mutate(page = 1:n()) %>% # adding a column with page numbers 
+  mutate(word = str_remove_all(biden, pattern = "'")) %>% 
   mutate(text_full = str_split(biden, pattern = '\\n')) %>% # splitting the text by line breaks
   unnest(text_full) %>% # unnesting the text column
   mutate(text_full = str_trim(text_full)) # trimming the whitespace
@@ -48,7 +50,7 @@ trump_lines <- data.frame(trump) %>%
   mutate(page = 1:n()) %>% # adding a column with page numbers
   mutate(text_full = str_split(trump, pattern = '\\n')) %>% # splitting the text by line breaks
   unnest(text_full) %>% # unnesting the text column
-  mutate(text_full = str_trim(text_full)) # trimming the whitespace
+  mutate(text_full = str_trim(text_full))  # trimming the whitespace
 
 # creating dataframes with a column where each word is a single observation
 biden_words <- biden_lines %>% # dataframe with a whole bunch of words as single observations
@@ -57,12 +59,13 @@ biden_words <- biden_lines %>% # dataframe with a whole bunch of words as single
 
 trump_words <- trump_lines %>% # dataframe with a whole bunch of words as single observations
   unnest_tokens(word, text_full) %>% # tokenizing by word
-  select(-trump)
+  select(-trump) %>% 
+  filter(word != "applause")
 
 # removing stop words
 
 # storing a vector of custom stop words to remove from the text
-stop_custom_vector <- c("applause", "american", "americans", "america", "america's", "american's", "i've", "i'm", "haven't", "don't", "can't", "won't", "let's", "it's", "people", "tonight", "percent", "u.s", "ago", "nation", "nation's", 1:100)
+stop_custom_vector <- c("applause", "american", "americans", "america", "america's", "american's", "i've", "i'm", "haven't", "don't", "can't", "won't", "let's", "it's", "people", "tonight", "percent", "u.s", "ago", "nation", "nation's", 1:10000)
 
 # turning the vector into a dataframe
 stop_custom <- data.frame(stop_custom_vector, "word")
@@ -70,10 +73,11 @@ stop_custom <- data.frame(stop_custom_vector, "word")
 stop_custom_clean <- stop_custom %>% 
   rename("word" = stop_custom_vector)
 
+
 # removing stop words from both text dataframes
 biden_words_clean <- biden_words %>% 
   anti_join(stop_words, by = "word") %>% 
-  anti_join(stop_custom_clean, by = "word")
+  anti_join(stop_custom_clean, by = "word") 
 
 trump_words_clean <- trump_words %>% 
   anti_join(stop_words, by = "word") %>% 
@@ -174,7 +178,9 @@ biden_bar <- ggplot(data = top_20_climate_biden, aes(x = reorder(word, n), y = n
   geom_text(aes(label = n), hjust = 1.2, color = "white") + # adding number labels
   labs(y = element_blank(),
        x = element_blank()) +
-  geom_rect(ymin = 2.1, ymax = 6.3, xmin = 0, xmax = 1.4, fill = "darkgreen") # allowing "climate" to be seen
+  geom_rect(ymin = 2.1, ymax = 6.3, xmin = 0, xmax = 1.4, 
+            fill = "darkgreen",
+            alpha = 0.07) # allowing "climate" to be seen
 
 trump_bar <- ggplot(data = top_20_climate_trump, aes(x = reorder(word, n), y = n, fill = n)) +
   geom_col() +
@@ -193,19 +199,20 @@ trump_bar <- ggplot(data = top_20_climate_trump, aes(x = reorder(word, n), y = n
   labs(y = element_blank(),
        x = element_blank()) +
   geom_text(label = "0", x = 1, y = 0.3) +
-  geom_rect(ymin = 2.7, ymax = 6.8, xmin = 0, xmax = 1.4, fill = "darkgreen")
+  geom_rect(ymin = 2.7, ymax = 6.8, xmin = 0, xmax = 1.4, 
+            fill = "darkgreen",
+            alpha = 0.07)
   
   biden_bar | trump_bar # placing plots next to eachother in outout html
 ```
 
-**Fig. 1** displays the results of text analysis from the 2022 and 2020 State of the Union address transcripts. Biden's 2022 adress is on the left side of the panel while Trump's 2020 adress is on the right. The top panel visualizes the top 50 most used words in each speech with the size of word corresponding to frequency. The bottom panel examines counts of the top 20 most frequently used words in each address. Words that were determined to be of no interest to the comparison (stop words) were excluded from the analysis and visualization. 
+**Fig. 1** displays the results of text analysis from the 2022 and 2020 State of the Union address transcripts. Biden's 2022 adress is on the left side of the panel while Trump's 2020 adress is on the right. The top panel visualizes the top 50 most used words in each speech with the size of word corresponding to frequency. The bottom panel examines counts of the top 20 most frequently used words in each address. Words that were determined to be of no interest to the comparison (stop words) were excluded from the analysis and visualization.
 
-*Note: "climate" was not one of the top 20 most frequently used words in either speech, but is included here for comparison. 
-$$\\[.5in]$$
+\*Note: "climate" was not one of the top 20 most frequently used words in either speech, but is included here for comparison. $$\\[.5in]$$
 
-### Sentiment Analysis
+## Sentiment Analysis
 
-![Credit: *CNN*](tb2.jpg){width=75%}
+![Credit: *CNN*](tb2.jpg){width="75%"}
 
 ```{r}
 ### DATA WRANGLING
@@ -268,30 +275,43 @@ scale_fill_manual(values = c("blue", "red")) + # custom colors
 
 ```
 
-**Fig. 2** shows the results of Afinn text sentiment analysis performed on the transcripts of the two State of the Union Addresses. Qualifying words are given a score from -5 (very negative) to 5 (very positive). The figure displays the average Afinn score of all qualifying words in each transcript. While the results showed similar sentiment overall, Trump's 2020 address rated as slightly more positive than Biden's 2022 address. 
-$$\\[.5in]$$
+**Fig. 2** shows the results of Afinn text sentiment analysis performed on the transcripts of the two State of the Union Addresses. Qualifying words are given a score from -5 (very negative) to 5 (very positive). The figure displays the average Afinn score of all qualifying words in each transcript. While the results showed similar sentiment overall, Trump's 2020 address rated as slightly more positive than Biden's 2022 address. $$\\[.5in]$$
 
-### Searchable Tables
+## Searchable Tables
+
+**Use the following tables to search for frequencies of specific words of interest in each address. For these tables, all words (including stop words) have been retained.**
 
 ```{r}
 # full text tables
 dt_biden <- biden_words %>% 
-  count(word)
+  count(word) %>% 
+  arrange(-n)
+
 dt_trump <- trump_words %>% 
-  count(word)
-
-# interactive datatables for searching speci
-datatable(dt_biden, colnames = c("Word", "Count"),
-          class = 'cell-border stripe',
-          caption = "Biden 2022")
-datatable(dt_trump, colnames = c("Word", "Count"),
-          class = 'cell-border stripe',
-          caption = "Trump 2020"
-          )
+  count(word) %>% 
+  arrange(-n)
 ```
+
+### Biden 2022
+
+```{r}
+# Biden interactive table
+datatable(dt_biden, colnames = c("Word", "Number of uses in Biden 2022 address"),
+          class = 'cell-border stripe')
+```
+
+### Trump 2020
+
+```{r}
+# Trump interactive table
+datatable(dt_trump, colnames = c("Word", "Number of uses in Trump 2020 address"),
+          class = 'cell-border stripe')
+```
+
 $$\\[.5in]$$
-#### Citations
 
-“Full Transcript: Trump’s 2020 State of the Union Address,” February 5, 2020, sec. U.S. https://www.nytimes.com/2020/02/05/us/politics/state-of-union-transcript.html.
+## Citations
 
-“Full Text: Biden State of the Union 2022 Transcript.” POLITICO. Accessed March 3, 2022. https://www.politico.com/news/2022/03/01/biden-state-of-the-union-2022-transcript-full-text-00013009.
+"Full Transcript: Trump's 2020 State of the Union Address," February 5, 2020, sec. U.S. <https://www.nytimes.com/2020/02/05/us/politics/state-of-union-transcript.html>.
+
+"Full Text: Biden State of the Union 2022 Transcript." POLITICO. Accessed March 3, 2022. <https://www.politico.com/news/2022/03/01/biden-state-of-the-union-2022-transcript-full-text-00013009>.
