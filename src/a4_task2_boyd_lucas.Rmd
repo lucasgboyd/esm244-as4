@@ -8,11 +8,16 @@ output:
     code_folding: hide
 ---
 
+![Willamette Falls, 2018. Credit: *Oregon Metro Council*](falls.jpeg)
 ## Overview {.tabset .tabset-pills}
 
-An engaging image (with caption, incl. photo credit) that is relevant to the dataset
-A brief summary (3 - 4 sentences) of the dataset, and what is included in this report
+The following report examines....A brief summary (3 - 4 sentences) of the dataset, and what is included in this report
+
+
 A map of the fish ladder location (you can make this in R on your own, or include an existing map appropriately licensed, with attribution)
+![](falls_map.png)
+
+
 A professionally formatted data citation
 
 ```{r setup, include=TRUE, message = FALSE, warning = FALSE}
@@ -25,6 +30,11 @@ library(tsibble)
 library(feasts)
 library(slider)
 library(janitor)
+library(patchwork)
+library(gghighlight)
+library(plotly)
+library(paletteer)
+library(RColorBrewer)
 
 ```
 
@@ -42,11 +52,17 @@ fish[is.na(fish)] <- 0
 
 # creating a longer df with single observations for each of the fish species of interest
 fish_longer <- fish %>% 
-  pivot_longer(cols = 2:4, names_to = "species", values_to = "count")
+  pivot_longer(cols = 2:4, names_to = "species", values_to = "count") %>% # selecting for fish species of interest
+  mutate(species = case_when(
+    species == "coho" ~ "Coho",
+    species == "jack_coho" ~ "Jack Coho", 
+    species == "steelhead" ~ "Steelhead"))
 
-
-# changing all NA values to 0 
-fish[is.na(fish)] <- 0 
+fish_month <- fish_longer %>% 
+  index_by(month = ~yearmonth(.)) %>% 
+  group_by(species) %>% 
+  summarize(monthly_total = sum(count)) %>% 
+  mutate(year = year(month))
 ```
 
 ### Tab 1: Original time series
@@ -55,20 +71,25 @@ fish[is.na(fish)] <- 0
  -  2 - 3 bullet points summarizing major patterns / notable trends in the salmon passage time series data
  
 ```{r}
-ggplot(data = fish) +
-  geom_line(aes(x = date, y = coho))
+ggplot(data = fish_month, aes(x = month, 
+                               y = monthly_total,
+                               color = species)) +
+  geom_line(size = 0.7) +
+  theme_minimal(12) +
+  theme(legend.position = c(.6, .75),
+        legend.title = element_blank(),
+        legend.text = element_text(
+          size = 12),
+        axis.text.x = element_text(
+          vjust = 8)
+        ) +
+  scale_color_manual(values = c("firebrick3", "goldenrod3", "darkgreen")) +
+  labs(x = element_blank(), y = "Total fish count per month") 
 
-ggplot(data = fish) +
-  geom_line(aes(x = date, y = jack_coho))
-
-ggplot(data = fish) +
-  geom_line(aes(x = date, y = steelhead))
-
-
-ggplot(data = fish_longer, aes(x = date, y = count, color = species)) +
-  geom_line ()
 
 ```
+ 
+ 
  We need to ask some big picture questions at this point, like: 
 
 - Does there appear to be an overall trend? No.
@@ -82,8 +103,11 @@ ggplot(data = fish_longer, aes(x = date, y = count, color = species)) +
 ```{r}
 # season plot for each fish species
 fish_longer %>% 
-  gg_season(y = count) +
-  facet_wrap( ~ species)
+  gg_season(y = count, pal = c("darkgreen", "goldenrod3", "firebrick3")) +
+  theme_minimal(12) +
+  labs(x = element_blank(), y = "Daily Count") +
+  theme(axis.text.x = element_text(
+    size = 12))
 ```
 
 Add 2 - 3 bullet points summarizing the major trends you see in the seasonplots.
@@ -94,10 +118,23 @@ Add 2 - 3 bullet points summarizing the major trends you see in the seasonplots.
 fish_annual <- fish_longer %>% 
   index_by(year = ~year(.)) %>% 
   group_by(species) %>% 
-  summarize(yearly_counts = sum(count))
+  summarize(yearly_counts = sum(count)) 
 
 ggplot(data = fish_annual, aes(x = year, y = yearly_counts, color = species)) +
-         geom_line()
+          geom_line(size = 1) +
+  theme_minimal(12) +
+  theme(legend.position = c(.6, .75),
+        legend.title = element_blank(),
+        legend.text = element_text(
+          size = 12),
+        axis.text.x = element_text(
+          vjust = 8)
+        ) +
+  scale_color_manual(values = c("firebrick3", "goldenrod3", "darkgreen")) +
+  labs(x = element_blank(), y = "Total fish count per month") +
+  scale_x_discrete(breaks = 10)
+  
+  
 ```
 
 -  A finalized figure of annual totals for fish passage, for each of the 3 species (coho, jack coho, steelhead). You decide if this is in a single panel, or multiple panels. Add a figure caption. 

@@ -23,6 +23,7 @@ library(pdftools)
 library(ggwordcloud)
 library(here)
 library(patchwork)
+library(DT)
 
 # reading in the data
 biden <- pdf_text(here("data", "biden.pdf")) # Biden State of the Union 2022
@@ -270,6 +271,25 @@ scale_fill_manual(values = c("blue", "red")) + # custom colors
 **Fig. 2** shows the results of Afinn text sentiment analysis performed on the transcripts of the two State of the Union Addresses. Qualifying words are given a score from -5 (very negative) to 5 (very positive). The figure displays the average Afinn score of all qualifying words in each transcript. While the results showed similar sentiment overall, Trump's 2020 address rated as slightly more positive than Biden's 2022 address. 
 $$\\[.5in]$$
 
+### Searchable Tables
+
+```{r}
+# full text tables
+dt_biden <- biden_words %>% 
+  count(word)
+dt_trump <- trump_words %>% 
+  count(word)
+
+# interactive datatables for searching speci
+datatable(dt_biden, colnames = c("Word", "Count"),
+          class = 'cell-border stripe',
+          caption = "Biden 2022")
+datatable(dt_trump, colnames = c("Word", "Count"),
+          class = 'cell-border stripe',
+          caption = "Trump 2020"
+          )
+```
+$$\\[.5in]$$
 #### Citations
 
 “Full Transcript: Trump’s 2020 State of the Union Address,” February 5, 2020, sec. U.S. https://www.nytimes.com/2020/02/05/us/politics/state-of-union-transcript.html.
