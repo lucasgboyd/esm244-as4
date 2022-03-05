@@ -132,7 +132,7 @@ ggplot(data = fish_annual, aes(x = year, y = yearly_counts, color = species)) +
         ) +
   scale_color_manual(values = c("firebrick3", "goldenrod3", "darkgreen")) +
   labs(x = element_blank(), y = "Total fish count per month") +
-  scale_x_discrete(breaks = 10)
+  scale_x_continuous(minor_breaks = seq(0,10,1))
   
   
 ```
