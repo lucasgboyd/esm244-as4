@@ -8,7 +8,7 @@ output:
     theme: spacelab
 ---
 
-![Willamette Falls, 2018. Credit: Oregon Metro Council](falls.jpeg){width="100%"}
+![Willamette Falls, 2018. Credit: *Oregon Metro Council*](falls.jpeg){width="100%"}
 
 ## Overview {.tabset .tabset-pills}
 
@@ -62,6 +62,7 @@ fish_month <- fish_longer %>%
 ### Original time series
 
 ```{r}
+# time series of daily fish passage data
 ggplot(data = fish_longer, aes(x = date, 
                                y = count,
                                color = species)) +
@@ -75,7 +76,7 @@ ggplot(data = fish_longer, aes(x = date,
           vjust = 8)
         ) +
   scale_color_manual(values = c("dodgerblue3", "goldenrod3", "darkgreen")) +
-  labs(x = element_blank(), y = "Total fish count per month")
+  labs(x = element_blank(), y = "Fish counts per day") 
 
 
 ```
@@ -96,8 +97,7 @@ $$\\[.5in]$$
 # season plot for each fish species
 fish_longer %>% 
   gg_season(y = count, 
-            pal = c("dodgerblue3", "goldenrod3", "darkgreen"),
-            season.labels = 1:12) +
+            pal = c("dodgerblue3", "goldenrod3", "darkgreen")) +
   theme_minimal(12) +
   labs(x = element_blank(), y = "Daily Count") +
   theme(axis.text.x = element_text(
@@ -119,13 +119,17 @@ $$\\[.5in]$$
 ### Annual counts by species
 
 ```{r}
+# wrangling fish passage data by year
 fish_annual <- fish_longer %>% 
   index_by(year = ~year(.)) %>% 
   group_by(species) %>% 
   summarize(yearly_counts = sum(count))
 
-ggplot(data = fish_annual, aes(x = year, y = yearly_counts, color = species)) +
-          geom_line(size = 1, alpha = 0.9) +
+# visualizing annual fish counts
+ggplot(data = fish_annual, aes(x = year, 
+                               y = yearly_counts, 
+                               color = species)) +  
+  geom_line(size = 1, alpha = 0.9) +
   theme_minimal(12) +
   theme(legend.position = c(.6, .75),
         legend.title = element_blank(),
@@ -135,8 +139,8 @@ ggplot(data = fish_annual, aes(x = year, y = yearly_counts, color = species)) +
           vjust = 8)
         ) +
   scale_color_manual(values = c("dodgerblue3", "goldenrod3", "darkgreen")) +
-  labs(x = element_blank(), y = "Total fish count per month") +
-  scale_x_continuous(n.breaks = 10)
+  labs(x = element_blank(), y = "Total fish count per year") +
+  scale_x_continuous(n.breaks = 10) # custom axis breaks
   
 ```
 
