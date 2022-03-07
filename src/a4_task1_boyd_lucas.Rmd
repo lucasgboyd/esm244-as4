@@ -60,14 +60,14 @@ tm_shape(counties) + # baselayer of counties
 # changing coordinate reference systems to match
 # counties %>% st_crs() # crs = 3857
 
-oil_3857 <- oil %>% st_transform(3857)
+oil_3857 <- oil %>% st_transform(3857) %>% 
+  filter(inlandmari == "Inland") # filtering for inland spills
 
 # joining spatial datasets
 county_oil <- counties %>% st_join(oil_3857)
 
 # summarizing total oil spills by county
 county_oil_counts <- county_oil %>% 
-  filter(inlandmari == "Inland") %>% 
   group_by(county) %>% 
   summarize(total_spills = sum(!is.na(dfgcontrol))) # ensuring that no spatial data is lost from the dataset
 
