@@ -37,6 +37,9 @@ counties <- read_sf(here("data", "ca_counties_as", "CA_Counties_TIGER2016.shp"))
   mutate(county = name) %>% 
   select(county) 
 ```
+
+***
+
 ## Interactive map of oil spill location
 ```{r}
  tmap_mode(mode = "view") # setting the tmap to viewing mode
@@ -47,6 +50,8 @@ tm_shape(counties) + # baselayer of counties
 ```
 
 **Fig 1** shows the locations of oil spill incidences across the state of california, indicated by the red dots. County borders are included for reference. A streetmap view is available in the layers of the interactive map to understand more specific locations of spills.
+
+***
 
 ## Oil spills by county
 
@@ -84,6 +89,4 @@ ggplot() +
 
 **Fig. 2** compares total number of inland oil spills by county in California. Darker color indicates a higher number of total spills. Los Angeles County had the highest total number of spills with 512.
 
-$$\\[.5in]$$
-
-
+*** 
