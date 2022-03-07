@@ -60,6 +60,7 @@ county_oil <- counties %>% st_join(oil_3857)
 
 # summarizing total oil spills by county
 county_oil_counts <- county_oil %>% 
+  filter(inlandmari == "Inland") %>% 
   group_by(county) %>% 
   summarize(total_spills = sum(!is.na(dfgcontrol))) # ensuring that no spatial data is lost from the dataset
 
@@ -79,7 +80,7 @@ ggplot() +
   
 ```
 
-**Fig. 2** compares total number of oil spills by county in California. Darker color indicates a higher number of total spills. Los Angeles County had the highest total number of spills with 512.
+**Fig. 2** compares total number of inland oil spills by county in California. Darker color indicates a higher number of total spills. Los Angeles County had the highest total number of spills with 512.
 
 
 
