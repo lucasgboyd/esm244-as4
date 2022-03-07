@@ -4,7 +4,7 @@ author: "Lucas Boyd"
 date: "3/1/2022"
 output: 
   html_document:
-    code_folding: show
+    code_folding: hide
 ---
 ## Introduction
 
@@ -12,6 +12,8 @@ The following report visualizes incidences and locations of oil spills in Califo
 
 **Data Citation:** Lampinen, Mark (2009). Oil Spill Incident Tracking [ds394]. California Department of Fish and Game, Office of Spill Prevention and Response.
 https://map.dfg.ca.gov/metadata/ds0394.html?5.108.39
+
+![Oil is seen on the beach in Huntington Beach, California on October 3, 2021, after a pipeline breach. Credit: *Patrick Fallon*](oil.jpeg)
 
 #### Setup
 ```{r setup, include=TRUE, message = FALSE, warning = FALSE}
@@ -82,6 +84,6 @@ ggplot() +
 
 **Fig. 2** compares total number of inland oil spills by county in California. Darker color indicates a higher number of total spills. Los Angeles County had the highest total number of spills with 512.
 
-
+$$\\[.5in]$$
 
 
