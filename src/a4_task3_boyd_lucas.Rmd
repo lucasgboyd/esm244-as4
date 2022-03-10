@@ -24,6 +24,7 @@ library(here)
 library(patchwork)
 library(DT)
 library(strip)
+library(stringr)
 
 # reading in the data
 biden <- pdf_text(here("data", "biden.pdf"))  # Biden State of the Union 2022
@@ -41,7 +42,6 @@ trump <- pdf_text(here("data", "trump.pdf")) # Trump State of of the Union 2020
 # storing data frames of text for each speech transcript
 biden_lines <- data.frame(biden) %>% 
   mutate(page = 1:n()) %>% # adding a column with page numbers 
-  mutate(word = str_remove_all(biden, pattern = "'")) %>% 
   mutate(text_full = str_split(biden, pattern = '\\n')) %>% # splitting the text by line breaks
   unnest(text_full) %>% # unnesting the text column
   mutate(text_full = str_trim(text_full)) # trimming the whitespace
@@ -65,7 +65,7 @@ trump_words <- trump_lines %>% # dataframe with a whole bunch of words as single
 # removing stop words
 
 # storing a vector of custom stop words to remove from the text
-stop_custom_vector <- c("applause", "american", "americans", "america", "america's", "american's", "i've", "i'm", "haven't", "don't", "can't", "won't", "let's", "it's", "people", "tonight", "percent", "u.s", "ago", "nation", "nation's", 1:10000)
+stop_custom_vector <- c("applause", "administration", "american", "americans", "america", "americas", "ive", "im", "havent", "dont", "cant", "wont", "lets", "its", "people", "tonight", "percent", "us", "ago", "nation", "nation's", "weve", 1:10000)
 
 # turning the vector into a dataframe
 stop_custom <- data.frame(stop_custom_vector, "word")
@@ -76,12 +76,14 @@ stop_custom_clean <- stop_custom %>%
 
 # removing stop words from both text dataframes
 biden_words_clean <- biden_words %>% 
-  anti_join(stop_words, by = "word") %>% 
-  anti_join(stop_custom_clean, by = "word") 
-
-trump_words_clean <- trump_words %>% 
+  mutate(word = str_remove_all(word, pattern = "[:punct:]")) %>%  # removing apostrophes and other punctuation
   anti_join(stop_words, by = "word") %>% 
   anti_join(stop_custom_clean, by = "word")
+
+trump_words_clean <- trump_words %>% 
+  mutate(word = str_remove_all(word, pattern = "[:punct:]")) %>% 
+  anti_join(stop_words, by = "word") %>% 
+  anti_join(stop_custom_clean, by = "word") 
 
 # getting counts of the instances of each word from each speech text
 
@@ -119,7 +121,7 @@ speech_cloud_biden <- ggplot(data = top_50_words_biden, aes(label = word)) + # l
 speech_cloud_trump <- ggplot(data = top_50_words_trump, aes(label = word)) +
   geom_text_wordcloud(aes(color = n, size = n), shape = "square") +
   scale_size_area(max_size = 6) +
-  scale_color_gradientn(colors = c("red4","red")) +
+  scale_color_gradientn(colors = c("red","red4")) +
   theme_minimal() +
   labs(title = "Trump 2020",
        size = 12) +
@@ -311,6 +313,8 @@ datatable(dt_trump, colnames = c("Word", "Number of uses in Trump 2020 address")
 $$\\[.5in]$$
 
 ## Citations
+
+#### Address transcripts were taken from the following sources:
 
 "Full Transcript: Trump's 2020 State of the Union Address," February 5, 2020, sec. U.S. <https://www.nytimes.com/2020/02/05/us/politics/state-of-union-transcript.html>.
 
